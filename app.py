@@ -11,7 +11,7 @@ ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "admin")
 
 app = Flask(__name__)
 # Инициализация БД
-db.init_db()
+
 
 def login_required(f):
     @wraps(f)
@@ -136,4 +136,5 @@ def stream_check():
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
 if __name__ == "__main__":
+    db.init_db()
     app.run(debug=False, port=5000, host="0.0.0.0")
