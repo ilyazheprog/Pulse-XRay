@@ -1,0 +1,134 @@
+[x-cloak] {
+    display: none !important;
+}
+
+/* Dark Theme */
+:root {
+    --bg-body: #111111;
+    --bg-sidebar: #161b22;
+    --bg-card: #161b22;
+    --border: #30363d;
+    --text-main: #e6edf3;
+    --text-muted: #8b949e;
+    --primary: #58a6ff;
+    --success: #3fb950;
+    --danger: #f85149;
+    --warning: #d29922;
+}
+
+/* Light Theme */
+.light {
+    --bg-body: #f0f2f5;
+    --bg-sidebar: #ffffff;
+    --bg-card: #ffffff;
+    --border: #dce1e7;
+    --text-main: #24292f;
+    --text-muted: #57606a;
+    --primary: #0969da;
+    --success: #1a7f37;
+    --danger: #cf222e;
+    --warning: #9a6700;
+}
+
+body {
+    background: var(--bg-body);
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+}
+
+/* PULSE CARD */
+.pulse-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s;
+}
+
+.pulse-card:hover {
+    transform: translateY(-2px);
+}
+
+/* INPUTS */
+.input-pulse {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    border-radius: 6px;
+}
+
+.light .input-pulse {
+    background: #f6f8fa;
+}
+
+.input-pulse:focus {
+    outline: 2px solid var(--primary);
+    border-color: transparent;
+}
+
+.beat-container {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 32px;
+    padding-top: 4px;
+    overflow: hidden;
+}
+
+.beat {
+    flex: 1;
+    min-width: 4px;
+    border-radius: 2px;
+    opacity: 0.8;
+}
+
+.beat-ok {
+    background-color: var(--success);
+    height: 70%;
+}
+
+.beat-fail {
+    background-color: var(--danger);
+    height: 100%;
+}
+
+.pill {
+    background: #238636;
+    color: white;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 99px;
+    font-size: 0.70rem;
+    min-width: 45px;
+    text-align: center;
+}
+
+.pill-down {
+    background: #d32f2f;
+}
+
+.sortable-ghost {
+    opacity: 0.4;
+    background: var(--border);
+}
+
+.cursor-grab {
+    cursor: grab;
+}
+
+.cursor-grab:active {
+    cursor: grabbing;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+}

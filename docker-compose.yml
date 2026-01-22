@@ -1,0 +1,11 @@
+services:
+  app:
+    build: .
+    container_name: pulse-xray
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./pulse.db:/app/pulse.db
+    env_file:
+      - .env
+    restart: unless-stopped
