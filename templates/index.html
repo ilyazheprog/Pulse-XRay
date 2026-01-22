@@ -63,7 +63,7 @@
                         <div class="space-y-1 monitors-list min-h-[10px] pb-2"
                             :data-group-name="grp">
                             <template x-for="c in getConfigsByGroup(grp)"
-                                :key="c.name">
+                                :key="c.name + '-' + (c.group || c.group_name)">
                                 <div
                                     class="monitor-item group flex items-center justify-between p-2 rounded hover:bg-[rgba(255,255,255,.05)] border border-transparent hover:border-[var(--border)] transition-all"
                                     :class="auth ? 'cursor-grab active:bg-[var(--bg-card)]' : 'cursor-pointer'"
