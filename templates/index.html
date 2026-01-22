@@ -1,442 +1,230 @@
 <!DOCTYPE html>
 <html lang="en" x-data="app()" :class="{ 'light': !darkMode }" x-cloak>
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Pulse Monitor</title>
-        <!-- Libs -->
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script defer
-            src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-        <script
-            src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-        <link
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-            rel="stylesheet">
-        <!-- Custom CSS & JS -->
-        <link rel="stylesheet" href="/static/main.css">
-    </head>
-    <body class="h-screen flex overflow-hidden">
-        <!-- SIDEBAR -->
-        <aside
-            class="w-80 flex-shrink-0 flex flex-col z-20 bg-[var(--bg-sidebar)] border-r border-[var(--border)] transition-transform duration-300 transform -translate-x-full md:translate-x-0 absolute md:relative h-full"
-            :class="sidebarOpen ? 'translate-x-0' : ''">
-            <div
-                class="h-16 flex items-center px-6 border-b border-[var(--border)]"><span
-                    class="text-xl mr-2">⚡</span><h1
-                    class="font-bold text-lg">Pulse <span
-                        style="color:var(--primary)">XRay</span></h1><button
-                    @click="sidebarOpen=false"
-                    class="md:hidden ml-auto text-[var(--text-muted)]">&times;</button></div>
-
-            <div class="p-4 space-y-3" x-show="auth">
-                <button @click="openAddModal()"
-                    class="w-full py-2 rounded-lg bg-[var(--primary)] hover:opacity-90 text-white font-bold shadow-lg transition flex items-center justify-center gap-2"><span>+
-                        Add Monitor</span></button>
-                <button @click="showGroupManager=true"
-                    class="w-full py-2 rounded-lg border border-[var(--border)] hover:bg-[rgba(255,255,255,.05)] text-xs font-bold uppercase tracking-wide text-[var(--text-muted)] transition">Manage
-                    Groups</button>
-            </div>
-            <div class="p-4" x-show="!auth">
-                <button @click="showLogin=true"
-                    class="w-full py-2 rounded-lg border border-[var(--border)] hover:bg-[rgba(255,255,255,.05)] text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Login
-                    as Admin</button>
-            </div>
-
-            <div class="flex-1 overflow-y-auto px-4 space-y-6 select-none"
-                id="groups-list">
-                <template x-for="grp in groups" :key="grp">
-                    <div class="group-container" :data-group="grp">
-                        <div
-                            class="group-header flex items-center mb-2 px-2 py-1 rounded hover:bg-[rgba(255,255,255,.03)] transition-colors"
-                            :class="auth ? 'cursor-grab hover:bg-[var(--border)]' : ''">
-                            <svg x-show="auth"
-                                class="w-4 h-4 mr-2 text-[var(--text-muted)]"
-                                fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24"><path stroke-linecap="round"
-                                    stroke-linejoin="round" stroke-width="2"
-                                    d="M4 8h16M4 16h16"></path></svg>
-                            <h3
-                                class="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide flex-1"
-                                x-text="grp"></h3>
-                        </div>
-                        <div class="space-y-1 monitors-list min-h-[10px] pb-2"
-                            :data-group-name="grp">
-                            <template x-for="c in getConfigsByGroup(grp)"
-                                :key="(c.name ? c.name : Math.random()) + '-' + (c.group || c.group_name)">
-                                <div
-                                    class="monitor-item group flex items-center justify-between p-2 rounded hover:bg-[rgba(255,255,255,.05)] border border-transparent hover:border-[var(--border)] transition-all"
-                                    :class="auth ? 'cursor-grab active:bg-[var(--bg-card)]' : 'cursor-pointer'"
-                                    :data-name="c.name">
-                                    <div
-                                        class="flex items-center gap-2 overflow-hidden w-full pointer-events-none">
-                                        <div
-                                            class="w-2 h-2 rounded-full flex-shrink-0"
-                                            :class="getAggregateStatus(c.name) ? 'bg-[var(--success)]' : 'bg-[var(--text-muted)]'"></div>
-                                        <div class="text-sm truncate opacity-90"
-                                            x-text="c.name"></div>
-                                    </div>
-                                    <button x-show="auth" @mousedown.stop
-                                        @click.stop="editMonitor(c)"
-                                        class="opacity-0 group-hover:opacity-100 text-[var(--text-muted)] hover:text-white flex-shrink-0 ml-2 z-10 relative bg-[var(--bg-sidebar)] rounded">
-                                        <svg class="w-4 h-4" fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"><path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H7v-3a2 2 0 01.586-1.414z" /></svg>
-                                    </button>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
-                </template>
-            </div>
-            <div
-                class="p-4 border-t border-[var(--border)] flex justify-between">
-                <button x-show="auth" @click="showSettings=true"
-                    class="text-xs font-bold text-[var(--text-muted)] hover:text-white">Settings</button>
-                <button @click="toggleTheme()"
-                    class="text-xs font-bold text-[var(--text-muted)] hover:text-white">Theme</button>
-                <button x-show="auth" @click="logout()"
-                    class="text-xs font-bold text-[var(--danger)] hover:text-white">Logout</button>
-            </div>
-        </aside>
-
-        <div x-show="sidebarOpen" @click="sidebarOpen=false"
-            class="fixed inset-0 bg-black/50 z-10 md:hidden backdrop-blur-sm"
-            x-transition.opacity></div>
-
-        <main
-            class="flex-1 flex flex-col h-full bg-[var(--bg-body)] overflow-hidden relative">
-            <div
-                class="h-16 flex items-center justify-between px-6 border-b border-[var(--border)] bg-[var(--bg-card)]">
-                <button @click="sidebarOpen=true"
-                    class="md:hidden mr-4 text-[var(--text-muted)]">Menu</button>
-                <div class="flex items-center gap-4">
-                    <div
-                        class="hidden md:flex items-center gap-2 px-4 py-1.5 rounded-full border border-[var(--border)] bg-[rgba(255,255,255,.05)] text-sm font-medium">
-                        <span class="w-2 h-2 rounded-full"
-                            :class="isRunning ? 'bg-blue-500 animate-ping' : 'bg-gray-500'"></span>
-                        <span
-                            x-text="isRunning ? 'Scanning...' : 'Idle'"></span>
-                    </div>
-                    <div class="flex flex-col items-end">
-                        <span
-                            class="text-[10px] text-[var(--text-muted)] uppercase font-bold">Next
-                            Run</span>
-                        <span class="text-xs font-mono"
-                            x-text="formatTime(countdown)"></span>
-                    </div>
-                </div>
-                <div class="flex gap-2">
-                    <span
-                        class="px-2 py-1 bg-[rgba(63,185,80,.1)] text-[var(--success)] rounded text-xs font-bold border border-[var(--success)] border-opacity-20">UP
-                        <span x-text="stats.online"></span></span>
-                    <span
-                        class="px-2 py-1 bg-[rgba(248,81,73,.1)] text-[var(--danger)] rounded text-xs font-bold border border-[var(--danger)] border-opacity-20">DOWN
-                        <span x-text="stats.offline"></span></span>
-                </div>
-            </div>
-            <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-8">
-                <template x-for="grp in groups" :key="grp">
-                    <div class="mb-8"
-                        x-show="getProxiesByGroup(grp).length > 0">
-                        <h2
-                            class="text-lg font-bold text-[var(--text-main)] mb-3 pl-1 border-l-4 border-[var(--primary)] ml-1"
-                            x-text="grp"></h2>
-                        <div class="space-y-3">
-                            <template x-for="p in getProxiesByGroup(grp)"
-                                :key="p.name">
-                                <div
-                                    class="pulse-card p-4 flex flex-col md:flex-row items-center gap-4 group cursor-pointer"
-                                    @click="showStatsModal(p)">
-                                    <div
-                                        class="flex-shrink-0 w-20 flex flex-col items-center gap-1">
-                                        <div class="pill"
-                                            :class="p.status ? '' : 'pill-down'"
-                                            x-text="p.uptime_1d + '%'"></div>
-                                        <span
-                                            class="text-[10px] text-[var(--text-muted)]"
-                                            x-show="!p.status"
-                                            x-text="p.msg"></span>
-                                    </div>
-                                    <div
-                                        class="flex-1 min-w-0 w-full text-center md:text-left">
-                                        <h3 class="text-base font-bold truncate"
-                                            x-text="p.name"></h3>
-                                        <div
-                                            class="text-xs text-[var(--text-muted)]"
-                                            x-text="p.latency > 0 ? p.latency + ' ms' : '-'"></div>
-                                    </div>
-                                    <div
-                                        class="flex-shrink-0 flex flex-col items-end w-full md:w-auto">
-                                        <div
-                                            class="beat-container w-full md:w-64 justify-end bg-[rgba(0,0,0,.1)] rounded px-1">
-                                            <template
-                                                x-for="h in p.history"><div
-                                                    class="beat"
-                                                    :class="h ? 'beat-ok' : 'beat-fail'"></div></template>
-                                            <template
-                                                x-if="!p.history || p.history.length===0"><div
-                                                    class="self-center w-full text-[10px] text-center text-[var(--text-muted)]">No
-                                                    Data</div></template>
-                                        </div>
-                                        <div
-                                            class="flex justify-between w-full md:w-64 text-[10px] text-[var(--text-muted)] mt-1 px-1">
-                                            <span>30d: <span
-                                                    :class="getColor(p.uptime_30d)"
-                                                    x-text="p.uptime_30d + '%'"></span></span>
-                                            <span>1y: <span
-                                                    :class="getColor(p.uptime_1y)"
-                                                    x-text="p.uptime_1y + '%'"></span></span>
-                                        </div>
-                                    </div>
-                                    <button x-show="auth && !p.status && p.log"
-                                        @click.stop="showLog(p)"
-                                        class="absolute top-2 right-2 text-[var(--danger)] hover:text-white p-1"><svg
-                                            class="w-4 h-4" fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"><path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg></button>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
-                </template>
-                <div x-show="proxies.length === 0"
-                    class="h-64 flex items-center justify-center text-[var(--text-muted)]">No
-                    monitors. Login to add one.</div>
-            </div>
-        </main>
-
-        <!-- AUTH MODAL -->
-        <div x-show="showLogin" x-transition
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-            <div class="pulse-card w-full max-w-sm p-6 relative"
-                @click.away="showLogin=false">
-                <h3 class="font-bold text-xl mb-4 text-center">Login</h3>
-                <input type="password" x-model="tokenInput"
-                    placeholder="Access Token"
-                    class="w-full input-pulse px-3 py-2 mb-4 text-center"
-                    @keyup.enter="login()">
-                <button @click="login()"
-                    class="w-full py-2 bg-[var(--primary)] text-white rounded font-bold">Sign
-                    In</button>
-            </div>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pulse Monitor</title>
+    <!-- Libs -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="h-screen flex overflow-hidden">
+    <!-- SIDEBAR -->
+    <aside class="w-80 flex-shrink-0 flex flex-col z-20 bg-[var(--bg-sidebar)] border-r border-[var(--border)] transition-transform duration-300 transform -translate-x-full md:translate-x-0 absolute md:relative h-full" :class="sidebarOpen ? 'translate-x-0' : ''">
+        <div class="h-16 flex items-center px-6 border-b border-[var(--border)]"><span class="text-xl mr-2">⚡</span><h1 class="font-bold text-lg">Pulse <span style="color:var(--primary)">XRay</span></h1><button @click="sidebarOpen=false" class="md:hidden ml-auto text-[var(--text-muted)]">&times;</button></div>
+        
+        <div class="p-4 space-y-3" x-show="auth">
+            <button @click="openAddModal()" class="w-full py-2 rounded-lg bg-[var(--primary)] hover:opacity-90 text-white font-bold shadow-lg transition flex items-center justify-center gap-2"><span>+ Add Monitor</span></button>
+            <button @click="showGroupManager=true" class="w-full py-2 rounded-lg border border-[var(--border)] hover:bg-[rgba(255,255,255,.05)] text-xs font-bold uppercase tracking-wide text-[var(--text-muted)] transition">Manage Groups</button>
+        </div>
+        <div class="p-4" x-show="!auth">
+            <button @click="showLogin=true" class="w-full py-2 rounded-lg border border-[var(--border)] hover:bg-[rgba(255,255,255,.05)] text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Login as Admin</button>
         </div>
 
-        <!-- ADMIN MODALS -->
-        <template x-if="auth">
-            <div>
-                <!-- ADD/EDIT -->
-                <div x-show="editModal.show" x-transition
-                    class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-                    <div class="pulse-card w-full max-w-lg p-6 relative"
-                        @click.away="editModal.show=false">
-                        <h3 class="font-bold text-xl mb-6"
-                            x-text="editModal.isEdit ? 'Edit Monitor' : 'Add New Monitor'"></h3>
-                        <div class="space-y-4">
-                            <div><label
-                                    class="block text-xs font-bold uppercase text-[var(--text-muted)] mb-1">Group</label>
-                                <div class="flex gap-2"><select
-                                        x-model="editModal.group"
-                                        class="w-full input-pulse px-3 py-2 text-sm"><template
-                                            x-for="g in groups" :key="g"><option
-                                                :value="g"
-                                                x-text="g"></option></template></select><button
-                                        @click="showGroupManager=true"
-                                        class="px-3 py-2 bg-[var(--border)] rounded text-xs font-bold hover:opacity-80">Setup</button></div>
+        <div class="flex-1 overflow-y-auto px-4 space-y-6 select-none" id="groups-list">
+            <!-- Groups Loop -->
+            <template x-for="grp in groups" :key="grp">
+                <div class="group-container" :data-group="grp">
+                    <!-- Group Header -->
+                    <div class="group-header flex items-center mb-2 px-2 py-1 rounded hover:bg-[rgba(255,255,255,.03)] transition-colors" :class="auth ? 'cursor-grab hover:bg-[var(--border)]' : ''">
+                        <svg x-show="auth" class="w-4 h-4 mr-2 text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
+                        <h3 class="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide flex-1" x-text="grp"></h3>
+                    </div>
+                    
+                    <!-- Monitors List -->
+                    <div class="space-y-1 monitors-list min-h-[10px] pb-2" :data-group-name="grp">
+                        <template x-for="c in getConfigsByGroup(grp)" :key="c.name + '-' + grp">
+                            <div class="monitor-item group flex items-center justify-between p-2 rounded hover:bg-[rgba(255,255,255,.05)] border border-transparent hover:border-[var(--border)] transition-all" 
+                                 :class="auth ? 'cursor-grab active:bg-[var(--bg-card)]' : 'cursor-pointer'"
+                                 :data-name="c.name">
+                                
+                                <div class="flex items-center gap-2 overflow-hidden w-full pointer-events-none">
+                                    <div class="w-2 h-2 rounded-full flex-shrink-0" :class="getAggregateStatus(c.name) ? 'bg-[var(--success)]' : 'bg-[var(--text-muted)]'"></div>
+                                    <div class="text-sm truncate opacity-90" x-text="c.name"></div>
+                                </div>
+                                
+                                <button x-show="auth" @mousedown.stop @click.stop="editMonitor(c)" class="opacity-0 group-hover:opacity-100 text-[var(--text-muted)] hover:text-white flex-shrink-0 ml-2 z-10 relative bg-[var(--bg-sidebar)] rounded">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H7v-3a2 2 0 01.586-1.414z"/></svg>
+                                </button>
                             </div>
-                            <div><label
-                                    class="block text-xs font-bold uppercase text-[var(--text-muted)] mb-1">Name</label><input
-                                    x-model="editModal.name" type="text"
-                                    class="w-full input-pulse px-3 py-2 text-sm"></div>
-                            <div><label
-                                    class="block text-xs font-bold uppercase text-[var(--text-muted)] mb-1">Link</label><textarea
-                                    x-model="editModal.link" rows="3"
-                                    class="w-full input-pulse px-3 py-2 text-sm font-mono"></textarea></div>
-                        </div>
-                        <div class="flex justify-between mt-6">
-                            <div><button x-show="editModal.isEdit"
-                                    @click="deleteMonitor()"
-                                    class="text-[var(--danger)] text-sm font-bold hover:underline">Delete</button></div>
-                            <div class="flex gap-2"><button
-                                    @click="editModal.show=false"
-                                    class="px-4 py-2 rounded text-sm bg-[var(--border)] font-semibold">Cancel</button><button
-                                    @click="saveMonitor()"
-                                    class="px-5 py-2 rounded text-sm bg-[var(--success)] text-white font-bold">Save</button></div>
-                        </div>
+                        </template>
                     </div>
                 </div>
-                <!-- GROUP MGR -->
-                <div x-show="showGroupManager" x-transition
-                    class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-                    <div class="pulse-card w-full max-w-md p-6"
-                        @click.away="showGroupManager=false">
-                        <h3 class="font-bold text-lg mb-4">Groups</h3>
-                        <div class="flex gap-2 mb-4"><input
-                                x-model="newGroupName" type="text"
-                                placeholder="New Group Name"
-                                class="flex-1 input-pulse px-3 py-2 text-sm"><button
-                                @click="addGroup()"
-                                class="px-4 py-2 bg-[var(--primary)] text-white rounded text-sm font-bold">Add</button></div>
-                        <div
-                            class="max-h-60 overflow-y-auto space-y-2"><template
-                                x-for="(g, idx) in groups" :key="g"><div
-                                    class="flex justify-between items-center p-2 rounded bg-[rgba(255,255,255,.03)] border border-[var(--border)]"><span
-                                        x-text="g"
-                                        class="text-sm"></span><button
-                                        @click="deleteGroup(g)"
-                                        class="text-[var(--danger)] hover:underline text-xs"
-                                        :disabled="g==='General'">Delete</button></div></template></div>
-                        <div class="mt-4 text-right"><button
-                                @click="showGroupManager=false"
-                                class="text-sm text-[var(--text-muted)] hover:text-white">Done</button></div>
+            </template>
+        </div>
+        <div class="p-4 border-t border-[var(--border)] flex justify-between">
+            <button x-show="auth" @click="showSettings=true" class="text-xs font-bold text-[var(--text-muted)] hover:text-white">Settings</button>
+            <button @click="toggleTheme()" class="text-xs font-bold text-[var(--text-muted)] hover:text-white">Theme</button>
+            <button x-show="auth" @click="logout()" class="text-xs font-bold text-[var(--danger)] hover:text-white">Logout</button>
+        </div>
+    </aside>
+    
+    <div x-show="sidebarOpen" @click="sidebarOpen=false" class="fixed inset-0 bg-black/50 z-10 md:hidden backdrop-blur-sm" x-transition.opacity></div>
+    
+    <main class="flex-1 flex flex-col h-full bg-[var(--bg-body)] overflow-hidden relative">
+        <div class="h-16 flex items-center justify-between px-6 border-b border-[var(--border)] bg-[var(--bg-card)]">
+            <button @click="sidebarOpen=true" class="md:hidden mr-4 text-[var(--text-muted)]">Menu</button>
+            <div class="flex items-center gap-4">
+                <div class="hidden md:flex items-center gap-2 px-4 py-1.5 rounded-full border border-[var(--border)] bg-[rgba(255,255,255,.05)] text-sm font-medium">
+                    <span class="w-2 h-2 rounded-full" :class="isRunning ? 'bg-blue-500 animate-ping' : 'bg-gray-500'"></span>
+                    <span x-text="isRunning ? 'Scanning...' : 'Idle'"></span>
+                </div>
+                <div class="flex flex-col items-end">
+                    <span class="text-[10px] text-[var(--text-muted)] uppercase font-bold">Next Run</span>
+                    <span class="text-xs font-mono" x-text="formatTime(countdown)"></span>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <span class="px-2 py-1 bg-[rgba(63,185,80,.1)] text-[var(--success)] rounded text-xs font-bold border border-[var(--success)] border-opacity-20">UP <span x-text="stats.online"></span></span>
+                <span class="px-2 py-1 bg-[rgba(248,81,73,.1)] text-[var(--danger)] rounded text-xs font-bold border border-[var(--danger)] border-opacity-20">DOWN <span x-text="stats.offline"></span></span>
+            </div>
+        </div>
+        <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-8">
+            <template x-for="grp in groups" :key="grp">
+                <div class="mb-8" x-show="getProxiesByGroup(grp).length > 0">
+                    <h2 class="text-lg font-bold text-[var(--text-main)] mb-3 pl-1 border-l-4 border-[var(--primary)] ml-1" x-text="grp"></h2>
+                    <div class="space-y-3">
+                        <template x-for="p in getProxiesByGroup(grp)" :key="p.name + '-' + grp">
+                            <div class="pulse-card p-4 flex flex-col md:flex-row items-center gap-4 group cursor-pointer" @click="showStatsModal(p)">
+                                <div class="flex-shrink-0 w-20 flex flex-col items-center gap-1">
+                                    <div class="pill" :class="p.status ? '' : 'pill-down'" x-text="p.uptime_1d + '%'"></div>
+                                    <span class="text-[10px] text-[var(--text-muted)]" x-show="!p.status" x-text="p.msg"></span>
+                                </div>
+                                <div class="flex-1 min-w-0 w-full text-center md:text-left">
+                                    <h3 class="text-base font-bold truncate" x-text="p.name"></h3>
+                                    <div class="text-xs text-[var(--text-muted)]" x-text="p.latency > 0 ? p.latency + ' ms' : '-'"></div>
+                                </div>
+                                <div class="flex-shrink-0 flex flex-col items-end w-full md:w-auto">
+                                    <div class="beat-container w-full md:w-64 justify-end bg-[rgba(0,0,0,.1)] rounded px-1">
+                                        <template x-for="h in p.history"><div class="beat" :class="h ? 'beat-ok' : 'beat-fail'"></div></template>
+                                        <template x-if="!p.history || p.history.length===0"><div class="self-center w-full text-[10px] text-center text-[var(--text-muted)]">No Data</div></template>
+                                    </div>
+                                    <div class="flex justify-between w-full md:w-64 text-[10px] text-[var(--text-muted)] mt-1 px-1">
+                                        <span>30d: <span :class="getColor(p.uptime_30d)" x-text="p.uptime_30d + '%'"></span></span>
+                                        <span>1y: <span :class="getColor(p.uptime_1y)" x-text="p.uptime_1y + '%'"></span></span>
+                                    </div>
+                                </div>
+                                <button x-show="auth && !p.status && p.log" @click.stop="showLog(p)" class="absolute top-2 right-2 text-[var(--danger)] hover:text-white p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></button>
+                            </div>
+                        </template>
                     </div>
                 </div>
-                <!-- SETTINGS -->
-                <div x-show="showSettings" x-transition
-                    class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-                    <div class="pulse-card w-full max-w-lg p-6"
-                        @click.away="showSettings=false">
-                        <h3 class="font-bold text-xl mb-4">Settings</h3>
-                        <div class="mb-4"><label
-                                class="block text-xs font-bold text-[var(--text-muted)] mb-1">Interval
-                                (s)</label><input type="number"
-                                x-model.number="settings.interval"
-                                class="w-full input-pulse px-3 py-2 text-sm"></div>
-                        <div class="mb-4"><label
-                                class="block text-xs font-bold text-[var(--text-muted)] mb-1">Test
-                                URLs</label><div
-                                class="flex flex-col gap-2"><template
-                                    x-for="(url, idx) in test_urls"
-                                    :key="idx"><div class="flex gap-2"><input
-                                            type="text"
-                                            class="flex-1 input-pulse px-3 py-2 text-sm font-mono"
-                                            x-model="test_urls[idx]"><button
-                                            @click="removeTestUrl(idx)"
-                                            class="px-2 py-1 bg-[var(--danger)] text-white rounded text-xs">Del</button></div></template><div
-                                    class="flex gap-2 mt-1"><input type="text"
-                                        class="flex-1 input-pulse px-3 py-2 text-sm font-mono"
-                                        x-model="newTestUrl"
-                                        placeholder="http://..."><button
-                                        @click="addTestUrl()"
-                                        class="px-3 py-2 bg-[var(--primary)] text-white rounded text-xs font-bold">Add</button></div></div></div>
-                        <button @click="clearHistory()"
-                            class="text-[var(--danger)] text-xs font-bold hover:underline">Clear
-                            History DB</button>
-                        <div class="flex justify-end mt-4"><button
-                                @click="showSettings=false; saveState()"
-                                class="px-5 py-2 bg-[var(--primary)] text-white rounded font-bold">Save</button></div>
+            </template>
+            <div x-show="proxies.length === 0" class="h-64 flex items-center justify-center text-[var(--text-muted)]">No monitors. Login to add one.</div>
+        </div>
+    </main>
+
+    <!-- AUTH MODAL -->
+    <div x-show="showLogin" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="pulse-card w-full max-w-sm p-6 relative" @click.away="showLogin=false">
+            <h3 class="font-bold text-xl mb-4 text-center">Login</h3>
+            <input type="password" x-model="tokenInput" placeholder="Access Token" class="w-full input-pulse px-3 py-2 mb-4 text-center" @keyup.enter="login()">
+            <button @click="login()" class="w-full py-2 bg-[var(--primary)] text-white rounded font-bold">Sign In</button>
+        </div>
+    </div>
+
+    <!-- ADMIN MODALS -->
+    <template x-if="auth">
+        <div>
+            <!-- ADD/EDIT -->
+            <div x-show="editModal.show" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+                <div class="pulse-card w-full max-w-lg p-6 relative" @click.away="editModal.show=false">
+                    <h3 class="font-bold text-xl mb-6" x-text="editModal.isEdit ? 'Edit Monitor' : 'Add New Monitor'"></h3>
+                    <div class="space-y-4">
+                        <div><label class="block text-xs font-bold uppercase text-[var(--text-muted)] mb-1">Group</label>
+                            <div class="flex gap-2"><select x-model="editModal.group" class="w-full input-pulse px-3 py-2 text-sm"><template x-for="g in groups" :key="g"><option :value="g" x-text="g"></option></template></select><button @click="showGroupManager=true" class="px-3 py-2 bg-[var(--border)] rounded text-xs font-bold hover:opacity-80">Setup</button></div>
+                        </div>
+                        <div><label class="block text-xs font-bold uppercase text-[var(--text-muted)] mb-1">Name</label><input x-model="editModal.name" type="text" class="w-full input-pulse px-3 py-2 text-sm"></div>
+                        <div><label class="block text-xs font-bold uppercase text-[var(--text-muted)] mb-1">Link</label><textarea x-model="editModal.link" rows="3" class="w-full input-pulse px-3 py-2 text-sm font-mono"></textarea></div>
+                    </div>
+                    <div class="flex justify-between mt-6">
+                        <div><button x-show="editModal.isEdit" @click="deleteMonitor()" class="text-[var(--danger)] text-sm font-bold hover:underline">Delete</button></div>
+                        <div class="flex gap-2"><button @click="editModal.show=false" class="px-4 py-2 rounded text-sm bg-[var(--border)] font-semibold">Cancel</button><button @click="saveMonitor()" class="px-5 py-2 rounded text-sm bg-[var(--success)] text-white font-bold">Save</button></div>
                     </div>
                 </div>
             </div>
-        </template>
-
-        <!-- LOG MODAL -->
-        <div x-show="logModal.show" x-transition
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"><div
-                class="bg-black border border-[var(--border)] w-full max-w-2xl rounded-xl shadow-2xl flex flex-col max-h-[80vh]"
-                @click.away="logModal.show=false"><div
-                    class="p-4 border-b border-[var(--border)] flex justify-between"><h3
-                        class="font-bold text-sm"
-                        x-text="logModal.title">Log</h3><button
-                        @click="logModal.show=false">&times;</button></div><div
-                    class="p-4 overflow-y-auto font-mono text-xs text-red-400"
-                    x-text="logModal.content"></div></div></div>
-
-        <!-- STATS MODAL -->
-        <div x-show="statsModal.show" x-transition
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-            <div class="pulse-card w-full max-w-xl p-6 relative"
-                @click.away="statsModal.show=false">
-                <div class="flex justify-between items-center mb-4"><h3
-                        class="font-bold text-lg text-[var(--text-main)]">Details</h3><button
-                        @click="statsModal.show=false"
-                        class="text-xl text-[var(--text-muted)]">&times;</button></div>
-                <div class="space-y-3 text-sm text-[var(--text-main)]">
-                    <div class="grid grid-cols-2 gap-2">
-                        <div><span class="text-[var(--text-muted)]">Name:</span>
-                            <span class="font-bold ml-2"
-                                x-text="statsModal.data.name"></span></div>
-                        <div><span
-                                class="text-[var(--text-muted)]">Group:</span>
-                            <span class="ml-2"
-                                x-text="statsModal.data.group"></span></div>
-                        <div><span
-                                class="text-[var(--text-muted)]">Status:</span>
-                            <span class="ml-2"
-                                :class="statsModal.data.status?'text-[var(--success)]':'text-[var(--danger)]'"
-                                x-text="statsModal.data.status?'UP':'DOWN'"></span></div>
-                        <div><span class="text-[var(--text-muted)]">Ping:</span>
-                            <span class="ml-2"
-                                x-text="statsModal.data.latency + ' ms'"></span></div>
-                    </div>
-                    <hr class="border-[var(--border)] my-2">
-                    <div
-                        class="grid grid-cols-3 gap-2 text-center bg-[rgba(255,255,255,0.03)] p-2 rounded-lg border border-[var(--border)]">
-                        <div><div
-                                class="text-[var(--text-muted)] text-[10px] uppercase font-bold">24H</div><div
-                                class="font-mono font-bold"
-                                :class="getColor(statsModal.data.uptime_1d)"
-                                x-text="statsModal.data.uptime_1d+'%'"></div></div>
-                        <div><div
-                                class="text-[var(--text-muted)] text-[10px] uppercase font-bold">30D</div><div
-                                class="font-mono font-bold"
-                                :class="getColor(statsModal.data.uptime_30d)"
-                                x-text="statsModal.data.uptime_30d+'%'"></div></div>
-                        <div><div
-                                class="text-[var(--text-muted)] text-[10px] uppercase font-bold">1Y</div><div
-                                class="font-mono font-bold"
-                                :class="getColor(statsModal.data.uptime_1y)"
-                                x-text="statsModal.data.uptime_1y+'%'"></div></div>
-                    </div>
-                    <div class="mt-6" x-data="{ hoveredIdx: null }">
-                        <div
-                            class="text-[10px] uppercase text-[var(--text-muted)] font-bold mb-2 flex justify-between h-4">
-                            <span>Timeline (Last 50)</span>
-                            <span x-show="hoveredIdx !== null"
-                                class="font-mono text-[var(--text-main)] flex items-center gap-2">
-                                <span
-                                    :class="(statsModal.data.history && statsModal.data.history[hoveredIdx]) ? 'text-[var(--success)]' : 'text-[var(--danger)]'"
-                                    x-text="(statsModal.data.history && statsModal.data.history[hoveredIdx]) ? 'UP' : 'DOWN'"></span>
-                                <span class="text-[var(--text-muted)]">•</span>
-                                <span
-                                    x-text="(statsModal.data.history_ts && statsModal.data.history_ts[hoveredIdx]) ? formatDate(statsModal.data.history_ts[hoveredIdx]) : 'No Data'"></span>
-                            </span>
-                            <span x-show="hoveredIdx === null"
-                                class="opacity-50">Hover bars for details</span>
+            <!-- GROUP MGR -->
+            <div x-show="showGroupManager" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+                <div class="pulse-card w-full max-w-md p-6" @click.away="showGroupManager=false">
+                    <h3 class="font-bold text-lg mb-4">Groups</h3>
+                    <div class="flex gap-2 mb-4"><input x-model="newGroupName" type="text" placeholder="New Group Name" class="flex-1 input-pulse px-3 py-2 text-sm"><button @click="addGroup()" class="px-4 py-2 bg-[var(--primary)] text-white rounded text-sm font-bold">Add</button></div>
+                    <div class="max-h-60 overflow-y-auto space-y-2"><template x-for="(g, idx) in groups" :key="g"><div class="flex justify-between items-center p-2 rounded bg-[rgba(255,255,255,.03)] border border-[var(--border)]"><span x-text="g" class="text-sm"></span><button @click="deleteGroup(g)" class="text-[var(--danger)] hover:underline text-xs" :disabled="g==='General'">Delete</button></div></template></div>
+                    <div class="mt-4 text-right"><button @click="showGroupManager=false" class="text-sm text-[var(--text-muted)] hover:text-white">Done</button></div>
+                </div>
+            </div>
+            <!-- SETTINGS -->
+            <div x-show="showSettings" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+                <div class="pulse-card w-full max-w-lg p-6" @click.away="showSettings=false">
+                    <h3 class="font-bold text-xl mb-4">Settings</h3>
+                    <div class="mb-4"><label class="block text-xs font-bold text-[var(--text-muted)] mb-1">Interval (s)</label><input type="number" x-model.number="settings.interval" class="w-full input-pulse px-3 py-2 text-sm"></div>
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-[var(--text-muted)] mb-1">Test URLs</label>
+                        <div class="flex flex-col gap-2">
+                            <template x-for="(url, idx) in test_urls" :key="idx"><div class="flex gap-2"><input type="text" class="flex-1 input-pulse px-3 py-2 text-sm font-mono" x-model="test_urls[idx]"><button @click="removeTestUrl(idx)" class="px-2 py-1 bg-[var(--danger)] text-white rounded text-xs">Del</button></div></template>
+                            <div class="flex gap-2 mt-1"><input type="text" class="flex-1 input-pulse px-3 py-2 text-sm font-mono" x-model="newTestUrl" placeholder="http://..."><button @click="addTestUrl()" class="px-3 py-2 bg-[var(--primary)] text-white rounded text-xs font-bold">Add</button></div>
                         </div>
-                        <div class="flex gap-[2px] items-end h-16 w-full"
-                            @mouseleave="hoveredIdx = null">
-                            <template
-                                x-for="(h, idx) in statsModal.data.history"
-                                :key="idx">
-                                <div
-                                    class="relative flex-1 h-full group/beat flex items-end cursor-crosshair"
-                                    @mouseenter="hoveredIdx = idx">
-                                    <div
-                                        class="w-full rounded-sm transition-all duration-100"
-                                        :class="h ? 'bg-[var(--success)] h-3/4 group-hover/beat:h-full group-hover/beat:bg-green-400' : 'bg-[var(--danger)] h-full group-hover/beat:bg-red-400'"></div>
+                    </div>
+                    <button @click="clearHistory()" class="text-[var(--danger)] text-xs font-bold hover:underline">Clear History DB</button>
+                    <div class="flex justify-end mt-4"><button @click="showSettings=false; saveState()" class="px-5 py-2 bg-[var(--primary)] text-white rounded font-bold">Save</button></div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- LOG MODAL -->
+    <div x-show="logModal.show" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"><div class="bg-black border border-[var(--border)] w-full max-w-2xl rounded-xl shadow-2xl flex flex-col max-h-[80vh]" @click.away="logModal.show=false"><div class="p-4 border-b border-[var(--border)] flex justify-between"><h3 class="font-bold text-sm" x-text="logModal.title">Log</h3><button @click="logModal.show=false">&times;</button></div><div class="p-4 overflow-y-auto font-mono text-xs text-red-400" x-text="logModal.content"></div></div></div>
+    
+    <!-- STATS MODAL -->
+    <div x-show="statsModal.show" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="pulse-card w-full max-w-xl p-6 relative" @click.away="statsModal.show=false">
+            <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-lg text-[var(--text-main)]">Details</h3><button @click="statsModal.show=false" class="text-xl text-[var(--text-muted)]">&times;</button></div>
+            <div class="space-y-3 text-sm text-[var(--text-main)]">
+                <div class="grid grid-cols-2 gap-2">
+                    <div><span class="text-[var(--text-muted)]">Name:</span> <span class="font-bold ml-2" x-text="statsModal.data.name"></span></div>
+                    <div><span class="text-[var(--text-muted)]">Group:</span> <span class="ml-2" x-text="statsModal.data.group"></span></div>
+                    <div><span class="text-[var(--text-muted)]">Status:</span> <span class="ml-2" :class="statsModal.data.status?'text-[var(--success)]':'text-[var(--danger)]'" x-text="statsModal.data.status?'UP':'DOWN'"></span></div>
+                    <div><span class="text-[var(--text-muted)]">Ping:</span> <span class="ml-2" x-text="statsModal.data.latency + ' ms'"></span></div>
+                </div>
+                <hr class="border-[var(--border)] my-2">
+                <div class="grid grid-cols-3 gap-2 text-center bg-[rgba(255,255,255,0.03)] p-2 rounded-lg border border-[var(--border)]">
+                    <div><div class="text-[var(--text-muted)] text-[10px] uppercase font-bold">24H</div><div class="font-mono font-bold" :class="getColor(statsModal.data.uptime_1d)" x-text="statsModal.data.uptime_1d+'%'"></div></div>
+                    <div><div class="text-[var(--text-muted)] text-[10px] uppercase font-bold">30D</div><div class="font-mono font-bold" :class="getColor(statsModal.data.uptime_30d)" x-text="statsModal.data.uptime_30d+'%'"></div></div>
+                    <div><div class="text-[var(--text-muted)] text-[10px] uppercase font-bold">1Y</div><div class="font-mono font-bold" :class="getColor(statsModal.data.uptime_1y)" x-text="statsModal.data.uptime_1y+'%'"></div></div>
+                </div>
+                <!-- TIMELINE -->
+                <div class="mt-6" x-data="{ hoveredIdx: null }">
+                    <div class="text-[10px] uppercase text-[var(--text-muted)] font-bold mb-2 flex justify-between h-4">
+                        <span>Timeline (Last 50)</span>
+                        <span x-show="hoveredIdx !== null" class="font-mono text-[var(--text-main)] flex items-center gap-2">
+                            <span :class="(statsModal.data.history && statsModal.data.history[hoveredIdx]) ? 'text-[var(--success)]' : 'text-[var(--danger)]'" 
+                                  x-text="(statsModal.data.history && statsModal.data.history[hoveredIdx]) ? 'UP' : 'DOWN'"></span>
+                            <span class="text-[var(--text-muted)]">•</span>
+                            <span x-text="(statsModal.data.history_ts && statsModal.data.history_ts[hoveredIdx]) ? formatDate(statsModal.data.history_ts[hoveredIdx]) : 'No Data'"></span>
+                        </span>
+                        <span x-show="hoveredIdx === null" class="opacity-50">Hover bars for details</span>
+                    </div>
+                    <div class="flex gap-[2px] items-end h-16 w-full" @mouseleave="hoveredIdx = null">
+                        <template x-for="(h, idx) in statsModal.data.history" :key="idx">
+                            <div class="relative flex-1 h-full group/beat flex items-end cursor-crosshair" @mouseenter="hoveredIdx = idx">
+                                <div class="w-full rounded-sm transition-all duration-100" 
+                                     :class="h ? 'bg-[var(--success)] h-3/4 group-hover/beat:h-full group-hover/beat:bg-green-400' : 'bg-[var(--danger)] h-full group-hover/beat:bg-red-400'">
                                 </div>
-                            </template>
-                            <template
-                                x-if="!statsModal.data.history || statsModal.data.history.length === 0">
-                                <div
-                                    class="w-full text-center text-[var(--text-muted)] self-center text-xs">No
-                                    history data available</div>
-                            </template>
-                        </div>
+                            </div>
+                        </template>
+                        <template x-if="!statsModal.data.history || statsModal.data.history.length === 0">
+                            <div class="w-full text-center text-[var(--text-muted)] self-center text-xs">No history data available</div>
+                        </template>
                     </div>
                 </div>
             </div>
         </div>
-        <!-- MAIN JS -->
-        <script src="/static/main.js"></script>
-    </body>
+    </div>
+
+    <!-- MAIN JS -->
+    <script src="/static/main.js"></script>
+</body>
 </html>
