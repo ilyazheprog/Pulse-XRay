@@ -152,7 +152,7 @@
                 <div class="pulse-card w-full max-w-md p-6" @click.away="showGroupManager=false">
                     <h3 class="font-bold text-lg mb-4">Groups</h3>
                     <div class="flex gap-2 mb-4"><input x-model="newGroupName" type="text" placeholder="New Group Name" class="flex-1 input-pulse px-3 py-2 text-sm"><button @click="addGroup()" class="px-4 py-2 bg-[var(--primary)] text-white rounded text-sm font-bold">Add</button></div>
-                    <div class="max-h-60 overflow-y-auto space-y-2"><template x-for="(g, idx) in groups" :key="g"><div class="flex justify-between items-center p-2 rounded bg-[rgba(255,255,255,.03)] border border-[var(--border)]"><span x-text="g" class="text-sm"></span><button @click="deleteGroup(g)" class="text-[var(--danger)] hover:underline text-xs" :disabled="g==='General'">Delete</button></div></template></div>
+                    <div class="max-h-60 overflow-y-auto space-y-2"><template x-for="(g, idx) in groups" :key="g"><div class="flex justify-between items-center p-2 rounded bg-[rgba(255,255,255,.03)] border border-[var(--border)]"><span x-text="g" class="text-sm"></span><button @click="deleteGroup(g)" class="text-[var(--danger)] hover:underline text-xs">Delete</button></div></template></div>
                     <div class="mt-4 text-right"><button @click="showGroupManager=false" class="text-sm text-[var(--text-muted)] hover:text-white">Done</button></div>
                 </div>
             </div>
