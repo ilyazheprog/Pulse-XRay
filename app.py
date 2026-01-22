@@ -73,7 +73,8 @@ def api_add_group():
 @login_required
 def api_delete_group():
     n = request.json.get("name")
-    if n and n != "General": db.delete_group(n)
+    if n:
+        db.delete_group(n)
     return jsonify({"status": "ok"})
 
 @app.route('/clear_history', methods=['POST'])

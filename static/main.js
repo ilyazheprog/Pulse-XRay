@@ -175,7 +175,7 @@ function app() {
         deleteMonitor() { if(confirm("Delete?")) { this.configurations.splice(this.editModal.index, 1); this.saveState(); this.editModal.show = false; this.proxies = this.proxies.filter(p => !(p.name.startsWith(this.editModal.name) && p.group === this.editModal.group)); this.$nextTick(() => this.initSortable()); } },
         addGroup() { if(this.newGroupName && !this.groups.includes(this.newGroupName)) { this.groups.push(this.newGroupName); this.newGroupName=''; this.saveState(); this.api('/groups/add', 'POST', {name:this.newGroupName}); this.$nextTick(() => this.initSortable()); } },
         deleteGroup(name) {
-            if(name==='General') return;
+            // Allow deleting 'General' group
             if(confirm("Delete group?")) {
                 this.groups = this.groups.filter(g => g !== name);
                 this.configurations.forEach(c => {
