@@ -148,10 +148,25 @@ function app() {
         addTestUrl() { if(this.newTestUrl) { this.test_urls.push(this.newTestUrl); this.newTestUrl=''; this.$nextTick(() => this.initSortable()); } },
         removeTestUrl(idx) { this.test_urls.splice(idx, 1); this.$nextTick(() => this.initSortable()); },
         openAddModal() { this.editModal = { show: true, isEdit: false, index: -1, name: '', link: '', group: this.groups[0]||'General' }; },
-        editMonitor(conf) { const idx=this.configurations.indexOf(conf); this.editModal={ show: true, isEdit: true, index: idx, name: conf.name, link: conf.link, group: conf.group_name||'General' }; },
+        editMonitor(conf) {
+            const idx = this.configurations.indexOf(conf);
+            this.editModal = {
+                show: true,
+                isEdit: true,
+                index: idx,
+                name: conf.name,
+                link: conf.link,
+                group: conf.group_name || conf.group || 'General'
+            };
+        },
         saveMonitor() {
             if(!this.editModal.link) return alert("Link required");
-            const item = { name: this.editModal.name, link: this.editModal.link, group: this.editModal.group };
+            const item = {
+                name: this.editModal.name,
+                link: this.editModal.link,
+                group: this.editModal.group,
+                group_name: this.editModal.group // ensure both fields are set
+            };
             if(this.editModal.isEdit) this.configurations[this.editModal.index] = item;
             else this.configurations.push(item);
             this.saveState(); this.editModal.show = false;
@@ -159,7 +174,19 @@ function app() {
         },
         deleteMonitor() { if(confirm("Delete?")) { this.configurations.splice(this.editModal.index, 1); this.saveState(); this.editModal.show = false; this.proxies = this.proxies.filter(p => !(p.name.startsWith(this.editModal.name) && p.group === this.editModal.group)); this.$nextTick(() => this.initSortable()); } },
         addGroup() { if(this.newGroupName && !this.groups.includes(this.newGroupName)) { this.groups.push(this.newGroupName); this.newGroupName=''; this.saveState(); this.api('/groups/add', 'POST', {name:this.newGroupName}); this.$nextTick(() => this.initSortable()); } },
-        deleteGroup(name) { if(name==='General') return; if(confirm("Delete group?")) { this.groups = this.groups.filter(g => g !== name); this.configurations.forEach(c => { if(c.group_name === name) c.group_name = 'General'; }); this.saveState(); this.api('/groups/delete', 'POST', {name:name}); this.$nextTick(() => this.initSortable()); } },
+        deleteGroup(name) {
+            if(name==='General') return;
+            if(confirm("Delete group?")) {
+                this.groups = this.groups.filter(g => g !== name);
+                this.configurations.forEach(c => {
+                    if(c.group === name) c.group = 'General';
+                    if(c.group_name === name) c.group_name = 'General';
+                });
+                this.saveState();
+                this.api('/groups/delete', 'POST', {name:name});
+                this.$nextTick(() => this.initSortable());
+            }
+        },
         clearHistory() { if(confirm("Clear ALL?")) this.api('/clear_history'); },
         runCheck() {
             if(this.timer) clearInterval(this.timer); this.countdown = 0;
@@ -185,7 +212,9 @@ function app() {
         getColor(val) { return val >= 95 ? 'text-[var(--success)]' : (val >= 70 ? 'text-[var(--warning)]' : 'text-[var(--danger)]'); },
         showLog(p) { this.logModal={show:true, title:p.name, content:p.log}; },
         showStatsModal(p) { this.statsModal={show:true, data:p}; },
-        getConfigsByGroup(gName) { return this.configurations.filter(c => (c.group || c.group_name || 'General') === gName); },
+        getConfigsByGroup(gName) {
+            return this.configurations.filter(c => c.group === gName || c.group_name === gName);
+        },
         getProxiesByGroup(gName) { return this.proxies.filter(p => p.group === gName); },
         get stats() { const t=this.proxies.length; const on=this.proxies.filter(p=>p.status).length; return {total:t, online:on, offline:t-on}; }
     }
