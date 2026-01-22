@@ -2,7 +2,7 @@ import sqlite3
 import datetime
 from typing import Any, Dict, List
 
-DB_FILE = "pulse.db"
+DB_FILE = "data/pulse.db"
 
 def init_db() -> None:
     with sqlite3.connect(DB_FILE) as conn:

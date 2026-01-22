@@ -5,7 +5,10 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./pulse.db:/app/pulse.db
+      - data:/app/data
     env_file:
       - .env
     restart: unless-stopped
+
+volumes:
+  data:

@@ -33,6 +33,7 @@ COPY core.py .
 COPY db_utils.py .
 COPY app.py .
 
+RUN mkdir /app/data
 # Expose port
 EXPOSE 5000
 
